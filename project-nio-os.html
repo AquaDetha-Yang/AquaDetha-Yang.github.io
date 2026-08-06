@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIO OS 2.0 — Yang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:ital,wght@0,100..900;1,100..900&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f5f5;
+    --gray: #777;
+    --light-gray: #bbb;
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 4rem;
+    --spacing-xl: 8rem;
+    --font-display: 'Sofia Sans Condensed', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Spline Sans Mono', 'Courier New', monospace;
+    --transition-smooth: cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  html { scroll-behavior: auto; font-size: 16px; }
+  body {
+    font-family: var(--font-body);
+    background: var(--white);
+    color: var(--black);
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ---- Cursor ---- */
+  .cursor {
+    position: fixed; top: 0; left: 0; width: 10px; height: 10px;
+    background: #000; border-radius: 50%; pointer-events: none;
+    z-index: 9999; transform: translate(-50%, -50%);
+    transition: width 0.3s var(--transition-smooth), height 0.3s var(--transition-smooth), background 0.25s, border-color 0.25s;
+  }
+  .cursor.light { background: #fff; }
+  .cursor.hover { width: 44px; height: 44px; background: transparent; border: 2px solid #000; }
+  .cursor.hover.light { border-color: #fff; }
+  .cursor-follower {
+    position: fixed; top: 0; left: 0; width: 44px; height: 44px;
+    border: 1px solid rgba(0,0,0,0.25); border-radius: 50%;
+    pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+    transition: all 0.15s ease-out, border-color 0.25s;
+  }
+  .cursor-follower.light { border-color: rgba(255,255,255,0.35); }
+
+  /* ---- Back link ---- */
+  .back-link {
+    position: fixed; top: var(--spacing-md); left: var(--spacing-lg);
+    z-index: 100; font-family: var(--font-body); font-size: 0.7rem;
+    letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none;
+    mix-blend-mode: difference; color: var(--white); display: flex; align-items: center; gap: 0.5rem;
+    transition: opacity 0.3s;
+  }
+  .back-link:hover { opacity: 0.5; }
+
+  /* ---- Section shared ---- */
+  section { padding: var(--spacing-xl) var(--spacing-lg); }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-sm);
+  }
+  .section-title {
+    font-family: var(--font-display); font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 700; letter-spacing: -0.02em; line-height: 0.95; margin-bottom: var(--spacing-lg);
+  }
+
+  /* ---- Hero ---- */
+  .project-hero {
+    height: 100vh; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 0; background: var(--black); position: relative; overflow: hidden;
+  }
+  .project-hero-bg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    background: url('NIO%20EC6.jpg') center/cover no-repeat;
+    filter: grayscale(100%) contrast(1.05);
+  }
+  .project-hero-bg::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(255,255,255,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 45% 80%, rgba(255,255,255,0.05) 0%, transparent 40%);
+  }
+  .project-hero-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent 0px, transparent 48px, rgba(255,255,255,0.02) 48px, rgba(255,255,255,0.02) 49px);
+  }
+  .project-hero-overlay {
+    position: relative; z-index: 1; padding: var(--spacing-lg);
+    background: linear-gradient(transparent 0%, rgba(10,10,10,0.9) 50%);
+  }
+  .project-hero-category {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-xs);
+  }
+  .project-hero-title {
+    font-family: var(--font-display); font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 800; letter-spacing: -0.03em; line-height: 0.9; text-transform: uppercase;
+    margin-bottom: var(--spacing-sm); color: var(--white);
+  }
+  .project-hero-desc {
+    font-family: var(--font-body); font-size: 0.9rem; line-height: 1.7;
+    color: #aaa; max-width: 600px;
+  }
+
+  /* ---- Overview ---- */
+  .overview { background: var(--white); }
+  .overview-video {
+    width: 100%;
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    border-radius: 4px;
+  }
+  .overview-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xl);
+    margin-top: var(--spacing-lg);
+  }
+  .overview-stat-number {
+    font-family: var(--font-display); font-size: clamp(3rem, 6vw, 5rem);
+    font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+  }
+  .overview-stat-label {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray); margin-top: var(--spacing-xs);
+  }
+  .overview-text {
+    font-family: var(--font-display); font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    font-weight: 400; line-height: 1.35; letter-spacing: -0.01em;
+  }
+
+  /* ---- Screen Roles ---- */
+  .screen-roles { background: var(--white); }
+  .screen-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--black); margin-top: var(--spacing-lg);
+  }
+  .screen-card {
+    background: var(--white); padding: var(--spacing-lg) var(--spacing-md);
+  }
+  .screen-card-icon {
+    width: 60px; height: 40px; background: #e8e8e8; border-radius: 6px;
+    margin-bottom: var(--spacing-md);
+  }
+  .screen-card-name {
+    font-family: var(--font-display); font-size: 1.5rem; font-weight: 700;
+    letter-spacing: -0.01em; margin-bottom: var(--spacing-xs);
+  }
+  .screen-card-spec {
+    font-family: var(--font-body); font-size: 0.6rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-sm);
+  }
+  .screen-card-desc {
+    font-family: var(--font-body); font-size: 0.8rem; line-height: 1.7; color: #555;
+  }
+
+  /* ---- Journey ---- */
+  .journey { background: var(--black); color: var(--white); }
+  .journey .section-label { color: var(--gray); }
+  .journey-map {
+    width: 100%;
+    margin-top: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    border-radius: 4px;
+  }
+  .journey-insights {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+  .journey-insight-label {
+    font-family: var(--font-body); font-size: 0.65rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-xs);
+  }
+  .journey-insight-desc {
+    font-family: var(--font-body); font-size: 0.8rem; line-height: 1.7; color: var(--light-gray);
+  }
+  .journey-nio-os {
+    width: 100%;
+    margin-top: var(--spacing-lg);
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .journey-steps { margin-top: var(--spacing-lg); }
+  .journey-step {
+    display: grid; grid-template-columns: 120px 1fr 1fr; gap: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-md) 0; border-top: 1px solid rgba(255,255,255,0.1);
+    align-items: start;
+  }
+  .journey-step-phase {
+    font-family: var(--font-body); font-size: 0.65rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray); padding-top: 0.25rem;
+  }
+  .journey-step-title {
+    font-family: var(--font-display); font-size: clamp(1.3rem, 2.5vw, 2rem);
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: var(--spacing-xs);
+  }
+  .journey-step-desc {
+    font-family: var(--font-body); font-size: 0.78rem; line-height: 1.7; color: var(--light-gray);
+  }
+  .journey-step-detail {
+    font-family: var(--font-body); font-size: 0.72rem; line-height: 1.7; color: #999;
+    max-width: 400px;
+  }
+
+  /* ---- Framework ---- */
+  .framework { background: var(--white); }
+  .fw-grid { margin-top: var(--spacing-lg); }
+  .fw-block {
+    margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .fw-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .fw-block-title {
+    font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: var(--spacing-sm);
+  }
+  .fw-block-desc {
+    font-family: var(--font-body); font-size: 0.85rem; line-height: 1.7; color: #555;
+    max-width: 700px; margin-bottom: var(--spacing-md);
+  }
+  .fw-diagram {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--black);
+  }
+  .fw-diagram-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .fw-node {
+    background: var(--white); padding: var(--spacing-md); text-align: center;
+  }
+  .fw-node-label {
+    font-family: var(--font-body); font-size: 0.6rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: 0.3rem;
+  }
+  .fw-node-name {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .fw-image {
+    width: 100%;
+    margin-top: var(--spacing-md);
+    border-radius: 4px;
+  }
+
+  /* ---- Showcase ---- */
+  .showcase { background: var(--black); color: var(--white); }
+  .showcase .section-label { color: var(--gray); }
+  .showcase-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: rgba(255,255,255,0.08); margin-top: var(--spacing-lg);
+  }
+  .showcase-item {
+    background: #111; padding: var(--spacing-md);
+  }
+  .showcase-media {
+    width: 100%; aspect-ratio: 16/10; background: #1a1a1a;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 0.6rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: #444; margin-bottom: var(--spacing-sm);
+  }
+  .showcase-full { grid-column: 1 / -1; }
+  .showcase-note {
+    font-family: var(--font-body); font-size: 0.72rem; line-height: 1.6; color: #999;
+  }
+  .showcase-note-title {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+    letter-spacing: -0.01em; color: var(--white); margin-bottom: 0.3rem;
+  }
+
+  /* ---- Market & Vision ---- */
+  .market { background: var(--white); padding-top: var(--spacing-lg); }
+  .market-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: var(--black); margin-top: var(--spacing-lg);
+  }
+  .market-card {
+    background: var(--white); padding: var(--spacing-lg) var(--spacing-md);
+  }
+  .market-card-header {
+    font-family: var(--font-display); font-size: 1.6rem; font-weight: 700;
+    letter-spacing: -0.01em; margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--black);
+  }
+  .market-insight {
+    font-family: var(--font-body); font-size: 0.8rem; line-height: 1.7; color: #555;
+    margin-bottom: var(--spacing-sm);
+  }
+  .market-insight::before {
+    content: '— '; font-weight: 700; color: var(--gray);
+  }
+  .vision-block {
+    grid-column: 1 / -1; background: var(--black); color: var(--white);
+    padding: var(--spacing-lg) var(--spacing-lg);
+  }
+  .vision-header {
+    font-family: var(--font-display); font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: var(--spacing-md);
+    text-align: center;
+  }
+  .vision-trends {
+    display: flex; flex-direction: column; gap: 1px;
+    background: rgba(255,255,255,0.1);
+  }
+  .vision-trend {
+    background: var(--black); padding: var(--spacing-md);
+    display: grid; grid-template-columns: 120px 1fr; gap: var(--spacing-md);
+    align-items: start;
+  }
+  .vision-trend-img {
+    width: 100%; aspect-ratio: 1/1; object-fit: cover;
+    border-radius: 2px;
+    grid-row: 1 / 3;
+  }
+  .vision-trend-header {
+    display: flex; align-items: baseline; gap: var(--spacing-sm);
+    margin: 0; padding: 0; margin-top: 0.3rem;
+  }
+  .vision-trend-number {
+    font-family: var(--font-display); font-size: 1.4rem; font-weight: 800;
+    color: rgba(255,255,255,0.3); margin: 0; padding: 0;
+  }
+  .vision-trend-title {
+    font-family: var(--font-display); font-size: 1.4rem;
+    font-weight: 700; letter-spacing: -0.01em; margin: 0; padding: 0;
+    line-height: 1.2;
+  }
+  .vision-trend-desc {
+    font-family: var(--font-body); font-size: 0.75rem; line-height: 1.5; color: var(--light-gray);
+    margin: 0; padding: 0;
+  }
+
+  /* ---- Footer nav ---- */
+  .project-nav {
+    padding: var(--spacing-lg); background: var(--white);
+    display: flex; justify-content: space-between; border-top: 1px solid #e0e0e0;
+  }
+  .project-nav a {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.15em;
+    text-transform: uppercase; text-decoration: none; color: var(--black);
+    display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.3s;
+  }
+  .project-nav a:hover { opacity: 0.5; }
+
+  @media (max-width: 768px) {
+    section { padding: var(--spacing-lg) var(--spacing-md); }
+    .back-link { left: var(--spacing-md); }
+    .project-hero-overlay { padding: var(--spacing-md); }
+    .overview-grid { grid-template-columns: 1fr; gap: var(--spacing-md); }
+    .screen-grid { grid-template-columns: 1fr; }
+    .journey-step { grid-template-columns: 1fr; gap: var(--spacing-xs); }
+    .journey-insights { grid-template-columns: 1fr; gap: var(--spacing-md); }
+    .fw-diagram { grid-template-columns: repeat(2, 1fr); }
+    .fw-diagram-3 { grid-template-columns: 1fr; }
+    .showcase-grid { grid-template-columns: 1fr; }
+    .showcase-full { grid-column: 1; }
+    .market-grid { grid-template-columns: 1fr; }
+    .vision-block { grid-column: 1; padding: var(--spacing-lg) var(--spacing-md); }
+    .vision-trend { grid-template-columns: 80px 1fr; gap: var(--spacing-sm); padding: var(--spacing-sm); }
+    .cursor, .cursor-follower { display: none; }
+    body { cursor: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursor-follower"></div>
+
+<a class="back-link" href="index.html">← Back</a>
+
+<!-- Hero -->
+<section class="project-hero">
+  <div class="project-hero-bg"></div>
+  <div class="project-hero-overlay">
+    <p class="project-hero-category">Cockpit OS · 2024–2025</p>
+    <h1 class="project-hero-title">NIO OS 2.0</h1>
+    <p class="project-hero-desc">A holistic redesign of NIO's in-vehicle operating system — orchestrating the instrument cluster, center display, HUD, and rear screens into a single coherent experience. Every pixel, every transition, and every interaction works in concert.</p>
+  </div>
+</section>
+
+<!-- Overview -->
+<section class="overview">
+  <div class="section-inner">
+    <p class="section-label">Overview</p>
+    <h2 class="section-title">A cockpit that<br>feels like one.</h2>
+    <video class="overview-video" src="NIO%20OS%202.0%20video.mp4" controls autoplay muted loop></video>
+    <div class="overview-grid">
+      <div>
+        <div class="overview-stat-number">4</div>
+        <p class="overview-stat-label">Display Surfaces · One System</p>
+      </div>
+      <div class="overview-text">
+        NIO OS 2.0 was born from a simple question: why does every screen in the car feel like it was designed by a different team? Our answer was to define a unified design language, interaction model, and information architecture across all cockpit surfaces — making the vehicle feel like a single, intelligent space.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- User Journey -->
+<section class="journey">
+  <div class="section-inner">
+    <p class="section-label">User Journey</p>
+    <h2 class="section-title">Mapped across<br>every moment.</h2>
+    <img class="journey-map" src="NIO%20OS%20userjourney.png" alt="NIO OS User Journey">
+    <div class="journey-insights">
+      <div class="journey-insight">
+        <p class="journey-insight-label">Continuous Companions</p>
+        <p class="journey-insight-desc">Navigation, media apps accompany the user throughout the entire journey — always present, always accessible, adapting to context but never disappearing.</p>
+      </div>
+      <div class="journey-insight">
+        <p class="journey-insight-label">Intermittent Engagement</p>
+        <p class="journey-insight-desc">Car control functions — climate, seat adjustments, window controls — appear sporadically as needed. They surface when relevant and recede when not, respecting the user's primary focus on driving.</p>
+      </div>
+      <div class="journey-insight">
+        <p class="journey-insight-label">Conditional Automation</p>
+        <p class="journey-insight-desc">Pilot assistance, constrained by current performance limitations, cannot sustain full-journey autonomous driving. It activates only on road segments where conditions meet its operational design domain — providing partial relief, not complete liberation.</p>
+      </div>
+    </div>
+    <img class="journey-nio-os" src="NIO%20OS.jpg" alt="NIO OS Interface">
+  </div>
+</section>
+
+<!-- System Framework -->
+<section class="framework">
+  <div class="section-inner">
+    <p class="section-label">System Framework</p>
+    <h2 class="section-title">The architecture<br>beneath the pixels.</h2>
+    <div class="fw-grid">
+      <div class="fw-block">
+        <h3 class="fw-block-title">Center Display · Information Architecture</h3>
+        <p class="fw-block-desc">The center stack follows a three-layer architecture: persistent global controls at the bottom, a main content canvas in the center, and contextual shortcuts in a collapsible sidebar. This structure ensures muscle memory forms quickly — critical functions are always in the same place, regardless of which app or view is active.</p>
+        <div class="fw-diagram">
+          <div class="fw-node">
+            <p class="fw-node-label">Top Bar</p>
+            <p class="fw-node-name">Status &amp; Profile</p>
+          </div>
+          <div class="fw-node">
+            <p class="fw-node-label">Main Canvas</p>
+            <p class="fw-node-name">Contextual Content</p>
+          </div>
+          <div class="fw-node">
+            <p class="fw-node-label">Sidebar</p>
+            <p class="fw-node-name">Quick Actions</p>
+          </div>
+          <div class="fw-node">
+            <p class="fw-node-label">Bottom Dock</p>
+            <p class="fw-node-name">Climate Controls</p>
+          </div>
+        </div>
+        <img class="fw-image" src="NIO%20OS%20Page.jpg" alt="NIO OS Page">
+      </div>
+      <div class="fw-block">
+        <h3 class="fw-block-title">Instrument Cluster · Information Priority</h3>
+        <p class="fw-block-desc">The cluster follows a three-layer hierarchy: Layer 1 (NIO Pilot) occupies the center as the primary visual focus. Layer 2 flanks it with essential driving data — speed, power, and scene information on left and right. Layer 3 (ambient — time, temperature, system mode) lives at the edges. This structure ensures critical information is always prominent while contextual data remains accessible.</p>
+        <div class="fw-diagram fw-diagram-3">
+          <div class="fw-node">
+            <p class="fw-node-label">Layer 1 · Center</p>
+            <p class="fw-node-name">NIO Pilot</p>
+          </div>
+          <div class="fw-node">
+            <p class="fw-node-label">Layer 2 · Left &amp; Right</p>
+            <p class="fw-node-name">Speed · Power · Scene</p>
+          </div>
+          <div class="fw-node">
+            <p class="fw-node-label">Layer 3 · Edge</p>
+            <p class="fw-node-name">Time · Mode</p>
+          </div>
+        </div>
+        <img class="fw-image" src="NIO%20OS%20Pilot.jpg" alt="NIO OS Pilot">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Market & Vision -->
+<section class="market">
+  <div class="section-inner">
+    <p class="section-label">Market &amp; Vision</p>
+    <h2 class="section-title">Where we are,<br>where we're going.</h2>
+    <div class="market-grid">
+      <div class="market-card">
+        <h3 class="market-card-header">Current Landscape</h3>
+        <p class="market-insight">Chinese OEMs lead in cockpit OS innovation — NIO, Xpeng, Li Auto, and Huawei have each invested heavily in vertically integrated software stacks, outpacing traditional automakers in UI sophistication and update frequency.</p>
+        <p class="market-insight">The gap between premium EV cockpits and legacy ICE interfaces has become a chasm. Consumers now evaluate cockpit experience as a primary purchase criterion — on par with range and charging infrastructure.</p>
+        <p class="market-insight">Voice + touch + gesture multimodal interaction is the new baseline. Systems that rely on touch alone feel dated within a single product cycle. The best cockpits adapt input modality to driving context — voice while moving, touch while parked.</p>
+      </div>
+      <div class="market-card">
+        <h3 class="market-card-header">Key Challenges</h3>
+        <p class="market-insight">Screen proliferation without information architecture leads to overwhelm. More displays ≠ better experience. The hardest design problem is deciding what not to show.</p>
+        <p class="market-insight">Hardware-software integration is the real bottleneck. Sensors, displays, lighting, and audio must sync perfectly — each with different latencies and update cycles. Seamless orchestration requires deep cross-disciplinary collaboration.</p>
+        <p class="market-insight">Mobility Agent learns user behaviors and preferences over time, building a persistent memory that makes the cockpit genuinely personal. It anticipates needs, adapts routines, and transforms the space into the user's own environment.</p>
+      </div>
+      <div class="vision-block">
+        <h3 class="vision-header">AI Cockpit Trends</h3>
+        <div class="vision-trends">
+          <div class="vision-trend">
+            <img class="vision-trend-img" src="trend1.png" alt="Mobility Agent">
+            <div class="vision-trend-header">
+              <p class="vision-trend-number">01</p>
+              <h4 class="vision-trend-title">From Voice Assistant to Mobility Agent</h4>
+            </div>
+            <p class="vision-trend-desc">From command-following to goal-understanding. The agent proactively plans, coordinates, and completes tasks continuously.</p>
+          </div>
+          <div class="vision-trend">
+            <img class="vision-trend-img" src="trend2.png" alt="Agent Ecosystem">
+            <div class="vision-trend-header">
+              <p class="vision-trend-number">02</p>
+              <h4 class="vision-trend-title">From App Store to Agent Ecosystem</h4>
+            </div>
+            <p class="vision-trend-desc">Unified intent interface replaces individual apps. A master agent orchestrates navigation, charging, parking, and media behind one entry point.</p>
+          </div>
+          <div class="vision-trend">
+            <img class="vision-trend-img" src="trend3.png" alt="Long-Term Memory">
+            <div class="vision-trend-header">
+              <p class="vision-trend-number">03</p>
+              <h4 class="vision-trend-title">From Personalization to Long-Term Memory</h4>
+            </div>
+            <p class="vision-trend-desc">Beyond seat position and climate. Understanding family structure, who sits where, children's needs, and interruption tolerance.</p>
+          </div>
+          <div class="vision-trend">
+            <img class="vision-trend-img" src="trend4.png" alt="Third Living Space">
+            <div class="vision-trend-header">
+              <p class="vision-trend-number">04</p>
+              <h4 class="vision-trend-title">From Transportation to Third Living Space</h4>
+            </div>
+            <p class="vision-trend-desc">As driving assistance improves, the cockpit takes on work, entertainment, and rest — becoming a third living space beyond home and office.</p>
+          </div>
+          <div class="vision-trend">
+            <img class="vision-trend-img" src="trend5.png" alt="Edge-Cloud Intelligence">
+            <div class="vision-trend-header">
+              <p class="vision-trend-number">05</p>
+              <h4 class="vision-trend-title">Edge-Cloud Collaborative Intelligence</h4>
+            </div>
+            <p class="vision-trend-desc">Edge: low-latency, offline, privacy, vehicle control. Cloud: complex reasoning, long-term memory, content generation. Together they form an intelligent system.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer nav -->
+<div class="project-nav">
+  <a href="index.html">← Back to Works</a>
+  <a href="project-autonomous.html">Next Project →</a>
+</div>
+
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+  (function() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Cursor
+    const cursor = document.getElementById('cursor');
+    const cursorFollower = document.getElementById('cursor-follower');
+
+    if (window.matchMedia('(min-width: 769px)').matches) {
+      let mouseX = 0, mouseY = 0, followerX = 0, followerY = 0;
+
+      function isDarkBackground(el) {
+        if (!el) return false;
+        const bg = getComputedStyle(el).backgroundColor;
+        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!m) return false;
+        const brightness = (+m[1] * 299 + +m[2] * 587 + +m[3] * 114) / 1000;
+        const alphaMatch = bg.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+        if (alphaMatch && +alphaMatch[4] < 0.3) return isDarkBackground(el.parentElement);
+        return brightness < 100;
+      }
+
+      document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        gsap.to(cursor, { x: mouseX, y: mouseY, duration: 0.1, ease: 'power2.out' });
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const dark = isDarkBackground(el);
+        cursor.classList.toggle('light', dark);
+        cursorFollower.classList.toggle('light', dark);
+      });
+
+      function animateFollower() {
+        followerX += (mouseX - followerX) * 0.08;
+        followerY += (mouseY - followerY) * 0.08;
+        cursorFollower.style.left = followerX + 'px';
+        cursorFollower.style.top = followerY + 'px';
+        requestAnimationFrame(animateFollower);
+      }
+      animateFollower();
+
+      document.querySelectorAll('a, button').forEach(el => {
+        el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+        el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+      });
+    }
+
+    // Scroll reveal
+    document.querySelectorAll('[data-reveal]').forEach(el => {
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 85%',
+        onEnter: () => gsap.to(el, { y: 0, opacity: 1, duration: 1, ease: 'expo.out' }),
+        once: true
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

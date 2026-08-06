@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L3 Autonomous Driving System — Yang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:ital,wght@0,100..900;1,100..900&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f5f5;
+    --gray: #777;
+    --light-gray: #bbb;
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 4rem;
+    --spacing-xl: 8rem;
+    --font-display: 'Sofia Sans Condensed', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Spline Sans Mono', 'Courier New', monospace;
+    --transition-smooth: cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  html { scroll-behavior: auto; font-size: 16px; }
+  body {
+    font-family: var(--font-body);
+    background: var(--white);
+    color: var(--black);
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ---- Cursor ---- */
+  .cursor {
+    position: fixed; top: 0; left: 0; width: 10px; height: 10px;
+    background: #000; border-radius: 50%; pointer-events: none;
+    z-index: 9999; transform: translate(-50%, -50%);
+    transition: width 0.3s var(--transition-smooth), height 0.3s var(--transition-smooth), background 0.25s, border-color 0.25s;
+  }
+  .cursor.light { background: #fff; }
+  .cursor.hover { width: 44px; height: 44px; background: transparent; border: 2px solid #000; }
+  .cursor.hover.light { border-color: #fff; }
+  .cursor-follower {
+    position: fixed; top: 0; left: 0; width: 44px; height: 44px;
+    border: 1px solid rgba(0,0,0,0.25); border-radius: 50%;
+    pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+    transition: all 0.15s ease-out, border-color 0.25s;
+  }
+  .cursor-follower.light { border-color: rgba(255,255,255,0.35); }
+
+  /* ---- Back link ---- */
+  .back-link {
+    position: fixed; top: var(--spacing-md); left: var(--spacing-lg);
+    z-index: 100; font-family: var(--font-body); font-size: 0.7rem;
+    letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none;
+    mix-blend-mode: difference; color: var(--white); display: flex; align-items: center; gap: 0.5rem;
+    transition: opacity 0.3s;
+  }
+  .back-link:hover { opacity: 0.5; }
+
+  /* ---- Section shared ---- */
+  section { padding: var(--spacing-xl) var(--spacing-lg); }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-sm);
+  }
+  .section-title {
+    font-family: var(--font-display); font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 700; letter-spacing: -0.02em; line-height: 0.95; margin-bottom: var(--spacing-lg);
+  }
+  .section-subtitle {
+    font-family: var(--font-display); font-size: clamp(1.2rem, 3vw, 2rem);
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: var(--spacing-md);
+  }
+
+  /* ---- Hero ---- */
+  .project-hero {
+    height: 100vh; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 0; background: var(--white); position: relative; overflow: hidden;
+  }
+  .project-hero-img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(100%) contrast(1.05);
+  }
+  .project-hero-overlay {
+    position: relative; z-index: 1; padding: var(--spacing-lg);
+    background: linear-gradient(transparent 0%, rgba(245,245,245,0.85) 60%);
+  }
+  .project-hero-category {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-xs);
+  }
+  .project-hero-title {
+    font-family: var(--font-display); font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 800; letter-spacing: -0.03em; line-height: 0.9; text-transform: uppercase;
+    margin-bottom: var(--spacing-sm);
+  }
+  .project-hero-desc {
+    font-family: var(--font-body); font-size: 0.9rem; line-height: 1.7;
+    color: #555; max-width: 600px;
+  }
+
+  /* ---- Overview ---- */
+  .overview { background: var(--white); }
+  .overview-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xl);
+    margin-top: var(--spacing-lg);
+  }
+  .overview-stat-number {
+    font-family: var(--font-display); font-size: clamp(3rem, 6vw, 5rem);
+    font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+  }
+  .overview-stat-label {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray); margin-top: var(--spacing-xs);
+  }
+  .overview-text {
+    font-family: var(--font-display); font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    font-weight: 400; line-height: 1.35; letter-spacing: -0.01em;
+  }
+
+  /* ---- Journey ---- */
+  .journey { background: var(--black); color: var(--white); }
+  .journey .section-label { color: var(--gray); }
+  .journey-map {
+    width: 100%;
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    border-radius: 4px;
+  }
+  .journey-steps { margin-top: var(--spacing-lg); }
+  .journey-step {
+    display: grid; grid-template-columns: 120px 1fr 200px; gap: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-md) 0; border-top: 1px solid rgba(255,255,255,0.1);
+    align-items: start;
+  }
+  .journey-step-phase {
+    font-family: var(--font-body); font-size: 0.65rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray); padding-top: 0.25rem;
+  }
+  .journey-step-title {
+    font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.5rem);
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: var(--spacing-xs);
+  }
+  .journey-step-desc {
+    font-family: var(--font-body); font-size: 0.8rem; line-height: 1.7; color: var(--light-gray);
+    max-width: 560px;
+  }
+  .journey-step-role {
+    padding-left: var(--spacing-md);
+    border-left: 1px solid rgba(255,255,255,0.1);
+  }
+  .journey-role-label {
+    font-family: var(--font-body); font-size: 0.6rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: 0.2rem;
+  }
+  .journey-role-value {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+    letter-spacing: -0.01em; margin-bottom: var(--spacing-sm);
+  }
+
+  /* ---- Key Points ---- */
+  .key-points { background: var(--white); }
+  .key-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+    background: var(--black); margin-top: var(--spacing-lg);
+  }
+  .key-card {
+    background: var(--white); padding: var(--spacing-lg) var(--spacing-md);
+  }
+  .key-card-number {
+    font-family: var(--font-display); font-size: 3rem; font-weight: 800;
+    color: #e0e0e0; margin-bottom: var(--spacing-sm); line-height: 1;
+  }
+  .key-card-title {
+    font-family: var(--font-display); font-size: 1.4rem; font-weight: 700;
+    letter-spacing: -0.01em; margin-bottom: var(--spacing-sm);
+  }
+  .key-card-desc {
+    font-family: var(--font-body); font-size: 0.8rem; line-height: 1.7; color: #555;
+  }
+
+  /* ---- Design Considerations ---- */
+  .design-considerations { background: var(--black); color: var(--white); }
+  .design-considerations .section-label { color: var(--gray); }
+  .dc-brainstorm {
+    width: 100%;
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    border-radius: 4px;
+  }
+  .dc-grid { margin-top: var(--spacing-lg); }
+  .dc-item {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);
+    padding: var(--spacing-lg) 0; border-top: 1px solid rgba(255,255,255,0.1); align-items: center;
+  }
+  .dc-item-title {
+    font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; margin-bottom: var(--spacing-xs);
+  }
+  .dc-item-desc {
+    font-family: var(--font-body); font-size: 0.8rem; line-height: 1.7; color: var(--light-gray);
+  }
+  .dc-item-img {
+    width: 100%;
+    aspect-ratio: 16/10;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  /* ---- Showcase ---- */
+  .showcase { background: var(--white); }
+  .showcase-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: var(--black); margin-top: var(--spacing-lg);
+  }
+  .showcase-item {
+    background: var(--white); padding: var(--spacing-md);
+  }
+  .showcase-media {
+    width: 100%; aspect-ratio: 16/10; background: #e0e0e0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 0.65rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: #aaa; margin-bottom: var(--spacing-sm);
+  }
+  .showcase-img {
+    width: 100%;
+    aspect-ratio: 16/10;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: var(--spacing-sm);
+  }
+  .showcase-item video { object-fit: contain; }
+  .showcase-video {
+    width: 100%;
+    border-radius: 4px;
+  }
+  .showcase-note {
+    font-family: var(--font-body); font-size: 0.72rem; line-height: 1.6; color: #555;
+  }
+  .showcase-note-title {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+    letter-spacing: -0.01em; color: var(--black); margin-bottom: 0.3rem;
+  }
+  .showcase-full {
+    grid-column: 1 / -1;
+    min-height: 500px;
+  }
+
+  /* ---- Navigation footer ---- */
+  .project-nav {
+    padding: var(--spacing-lg); background: var(--white);
+    display: flex; justify-content: space-between; border-top: 1px solid #e0e0e0;
+  }
+  .project-nav a {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.15em;
+    text-transform: uppercase; text-decoration: none; color: var(--black);
+    display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.3s;
+  }
+  .project-nav a:hover { opacity: 0.5; }
+
+  @media (max-width: 768px) {
+    section { padding: var(--spacing-lg) var(--spacing-md); }
+    .back-link { left: var(--spacing-md); }
+    .project-hero-overlay { padding: var(--spacing-md); }
+    .overview-grid { grid-template-columns: 1fr; gap: var(--spacing-md); }
+    .journey-step { grid-template-columns: 1fr; gap: var(--spacing-xs); }
+    .journey-step-role { padding-left: 0; border-left: none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: var(--spacing-sm); }
+    .key-grid { grid-template-columns: 1fr; }
+    .dc-item { grid-template-columns: 1fr; gap: var(--spacing-md); }
+    .showcase-grid { grid-template-columns: 1fr; }
+    .showcase-full { grid-column: 1; min-height: 300px; }
+    .cursor, .cursor-follower { display: none; }
+    body { cursor: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursor-follower"></div>
+
+<a class="back-link" href="index.html">← Back</a>
+
+<!-- Hero -->
+<section class="project-hero">
+  <img class="project-hero-img" src="L3%20Autonomous%20Driving%20System_hero.png" alt="L3 Autonomous Driving System">
+  <div class="project-hero-overlay">
+    <p class="project-hero-category">HMI Design · 2025</p>
+    <h1 class="project-hero-title">L3 Autonomous<br>Driving System</h1>
+    <p class="project-hero-desc">A human-centered HMI design for Level 3 autonomous driving — where the vehicle handles dynamic driving tasks, but the driver must be ready to take over at any moment. The design challenge lies in the handover.</p>
+  </div>
+</section>
+
+<!-- Overview -->
+<section class="overview">
+  <div class="section-inner">
+    <p class="section-label">Overview</p>
+    <h2 class="section-title">The challenge of<br>shared control.</h2>
+    <div class="overview-grid">
+      <div>
+        <div class="overview-stat-number">L3</div>
+        <p class="overview-stat-label">Conditional Automation</p>
+      </div>
+      <div class="overview-text">
+        At Level 3, the driver becomes a fallback — not continuously monitoring, but ready to intervene within seconds. The interface must maintain trust, communicate system confidence, and make the handover seamless.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- User Journey -->
+<section class="journey">
+  <div class="section-inner">
+    <p class="section-label">User Journey</p>
+    <h2 class="section-title">From manual to<br>autonomous and back.</h2>
+    <img class="journey-map" src="L3%20User%20Journey.png" alt="L3 User Journey Map">
+    <div class="journey-steps">
+      <div class="journey-step">
+        <span class="journey-step-phase">Phase 01</span>
+        <div>
+          <h3 class="journey-step-title">Manual Departure</h3>
+          <p class="journey-step-desc">Driver navigates out of the parking structure and through urban streets manually. The system monitors conditions in the background, preparing for autonomy availability on the highway segment ahead.</p>
+        </div>
+        <div class="journey-step-role">
+          <p class="journey-role-label">User Role</p>
+          <p class="journey-role-value">Driver</p>
+          <p class="journey-role-label">Driving Responsibility</p>
+          <p class="journey-role-value">Human</p>
+        </div>
+      </div>
+      <div class="journey-step">
+        <span class="journey-step-phase">Phase 02</span>
+        <div>
+          <h3 class="journey-step-title">Autonomous Activation</h3>
+          <p class="journey-step-desc">As the vehicle enters the highway, the system signals readiness. Driver initiates L3 mode with a deliberate physical input. The steering wheel retracts slightly. Ambient lighting shifts to a calm blue spectrum — the vehicle now drives itself.</p>
+        </div>
+        <div class="journey-step-role">
+          <p class="journey-role-label">User Role</p>
+          <p class="journey-role-value">Supervisor</p>
+          <p class="journey-role-label">Driving Responsibility</p>
+          <p class="journey-role-value">Vehicle</p>
+        </div>
+      </div>
+      <div class="journey-step">
+        <span class="journey-step-phase">Phase 03</span>
+        <div>
+          <h3 class="journey-step-title">Eyes-Free Engagement</h3>
+          <p class="journey-step-desc">During sustained autonomy, the driver engages in non-driving tasks — reading, messaging, or simply resting. The HMI maintains peripheral awareness through subtle ambient cues, indicating system confidence through color temperature and gentle rhythmic pulses.</p>
+        </div>
+        <div class="journey-step-role">
+          <p class="journey-role-label">User Role</p>
+          <p class="journey-role-value">Supervisor</p>
+          <p class="journey-role-label">Driving Responsibility</p>
+          <p class="journey-role-value">Vehicle</p>
+        </div>
+      </div>
+      <div class="journey-step">
+        <span class="journey-step-phase">Phase 04</span>
+        <div>
+          <h3 class="journey-step-title">Takeover Request</h3>
+          <p class="journey-step-desc">As the highway exit approaches or weather degrades, the system initiates a staged takeover: early advisory → soft alert → escalating urgency. Multi-modal feedback (visual, haptic, audible) guides the driver back to the loop with calm precision, not panic.</p>
+        </div>
+        <div class="journey-step-role">
+          <p class="journey-role-label">User Role</p>
+          <p class="journey-role-value">Supervisor</p>
+          <p class="journey-role-label">Driving Responsibility</p>
+          <p class="journey-role-value">Vehicle</p>
+        </div>
+      </div>
+      <div class="journey-step">
+        <span class="journey-step-phase">Phase 05</span>
+        <div>
+          <h3 class="journey-step-title">Manual Resumption</h3>
+          <p class="journey-step-desc">Driver confirms takeover with steering input. The system transitions back cleanly — wheel extends, ambient light returns to standard white, dashboard reconfigures to manual driving layout. The handover is complete.</p>
+        </div>
+        <div class="journey-step-role">
+          <p class="journey-role-label">User Role</p>
+          <p class="journey-role-value">Driver</p>
+          <p class="journey-role-label">Driving Responsibility</p>
+          <p class="journey-role-value">Human</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Key Points -->
+<section class="key-points">
+  <div class="section-inner">
+    <p class="section-label">Key Considerations</p>
+    <h2 class="section-title">What matters most<br>at Level 3.</h2>
+    <div class="key-grid">
+      <div class="key-card">
+        <div class="key-card-number">01</div>
+        <h3 class="key-card-title">Mode<br>Confusion</h3>
+        <p class="key-card-desc">Drivers must never be uncertain about who is in control. Clear, redundant mode indicators — across instrument cluster, HUD, and ambient lighting — eliminate ambiguity at every moment.</p>
+      </div>
+      <div class="key-card">
+        <div class="key-card-number">02</div>
+        <h3 class="key-card-title">Takeover<br>Timing</h3>
+        <p class="key-card-desc">L3 requires a takeover window of 8–15 seconds. The interface must provide progressive urgency without inducing panic. Timing, escalation curves, and feedback modality are critical design parameters.</p>
+      </div>
+      <div class="key-card">
+        <div class="key-card-number">03</div>
+        <h3 class="key-card-title">Trust<br>Calibration</h3>
+        <p class="key-card-desc">Over-trust leads to complacency; under-trust defeats the purpose of autonomy. The HMI must display system confidence transparently — showing what the vehicle sees, what it plans, and when it's uncertain.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Design Considerations -->
+<section class="design-considerations">
+  <div class="section-inner">
+    <p class="section-label">Design Considerations</p>
+    <h2 class="section-title">How we translate<br>requirements into<br>experience.</h2>
+    <img class="dc-brainstorm" src="L3%20SR%20Brainstorming%20.png" alt="L3 SR Brainstorming">
+    <div class="dc-grid">
+      <div class="dc-item">
+        <div>
+          <h3 class="dc-item-title">Ambient Elements:<br>Strategic Retreat</h3>
+          <p class="dc-item-desc">In autonomous mode, ambient elements — lighting, sound, haptic feedback — deliberately recede to create a calm, low-stimulation environment. This "strategic retreat" reduces cognitive load and allows the driver to disengage from continuous monitoring. When the system needs attention, these elements gradually re-engage, creating a natural rhythm between engagement and relaxation.</p>
+        </div>
+        <img class="dc-item-img" src="L3%20default.jpg" alt="L3 Default State">
+      </div>
+      <div class="dc-item">
+        <img class="dc-item-img" src="L3%20turn%20right.jpg" alt="L3 Turn Right">
+        <div>
+          <h3 class="dc-item-title">Autonomous Driving Elements:<br>Progressive Evolution</h3>
+          <p class="dc-item-desc">As autonomy matures, the driving interface evolves from explicit status indicators to implicit environmental cues. Early phases rely on prominent icons and alerts; advanced phases use subtle spatial audio, peripheral lighting shifts, and predictive path visualization. The UI adapts to the driver's growing familiarity, reducing visual clutter while maintaining safety-critical awareness.</p>
+        </div>
+      </div>
+      <div class="dc-item">
+        <div>
+          <h3 class="dc-item-title">Backstage State</h3>
+          <p class="dc-item-desc">The system continuously monitors driver readiness, environmental conditions, and system health — all operating in the background without demanding visual attention. This "backstage state" architecture ensures that critical information surfaces only when necessary, while non-essential data remains accessible but unobtrusive. The driver experiences seamless autonomy while the system maintains vigilance.</p>
+        </div>
+        <img class="dc-item-img" src="L3%20Backstage.png" alt="L3 Backstage State">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Design Showcase -->
+<section class="showcase">
+  <div class="section-inner">
+    <p class="section-label">Design Showcase</p>
+    <h2 class="section-title">Visuals, motion,<br>and details.</h2>
+    <div class="showcase-grid">
+      <!-- Video -->
+      <div class="showcase-item showcase-full">
+        <video class="showcase-video" src="L3%20motion.mp4" controls autoplay muted loop></video>
+        <div class="showcase-note">
+          <p class="showcase-note-title">L3 Full Demo</p>
+          <p>Falcon Mode — a dedicated third-person perspective designed specifically for L3 autonomous driving. It visually communicates the driver's transition from active controller to passive supervisor, displaying the vehicle's spatial awareness, planned path, and system confidence from an elevated bird's-eye view. This unique perspective reinforces the psychological shift required at Level 3: you are no longer driving — you are overseeing.</p>
+        </div>
+      </div>
+      <!-- Feature 1: Narrow Path -->
+      <div class="showcase-item">
+        <img class="showcase-img" src="L3%20narrow%20path.jpg" alt="L3 Narrow Path View">
+        <div class="showcase-note">
+          <p class="showcase-note-title">Narrow Path Perspective</p>
+          <p>When navigating narrow roads or tight passages, the camera automatically elevates to a non-perspective bird's-eye view. This overhead angle provides clear spatial awareness of road width and surrounding obstacles, helping the driver understand the vehicle's exact position relative to narrow gaps — essential for confident supervision in constrained environments.</p>
+        </div>
+      </div>
+      <!-- Feature 2: MRM -->
+      <div class="showcase-item">
+        <img class="showcase-img" src="MRM.png" alt="MRM - Minimal Risk Maneuver">
+        <div class="showcase-note">
+          <p class="showcase-note-title">MRM — Minimal Risk Maneuver</p>
+          <p>When the system encounters an edge case it cannot handle — or when the driver fails to respond to takeover requests — it initiates a Minimal Risk Maneuver. The vehicle safely pulls over to the roadside, activates hazard lights, and comes to a controlled stop. The interface clearly communicates the MRM state, reasoning, and final position to the driver.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Navigation -->
+<div class="project-nav">
+  <a href="index.html" class="back-to-works">← Back to Works</a>
+  <a href="project-nio-os.html">Next Project →</a>
+</div>
+
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+  (function() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Cursor
+    const cursor = document.getElementById('cursor');
+    const cursorFollower = document.getElementById('cursor-follower');
+
+    if (window.matchMedia('(min-width: 769px)').matches) {
+      let mouseX = 0, mouseY = 0, followerX = 0, followerY = 0;
+
+      function isDarkBackground(el) {
+        if (!el) return false;
+        const bg = getComputedStyle(el).backgroundColor;
+        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!m) return false;
+        const brightness = (+m[1] * 299 + +m[2] * 587 + +m[3] * 114) / 1000;
+        const alphaMatch = bg.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+        if (alphaMatch && +alphaMatch[4] < 0.3) return isDarkBackground(el.parentElement);
+        return brightness < 100;
+      }
+
+      document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        gsap.to(cursor, { x: mouseX, y: mouseY, duration: 0.1, ease: 'power2.out' });
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const dark = isDarkBackground(el);
+        cursor.classList.toggle('light', dark);
+        cursorFollower.classList.toggle('light', dark);
+      });
+
+      function animateFollower() {
+        followerX += (mouseX - followerX) * 0.08;
+        followerY += (mouseY - followerY) * 0.08;
+        cursorFollower.style.left = followerX + 'px';
+        cursorFollower.style.top = followerY + 'px';
+        requestAnimationFrame(animateFollower);
+      }
+      animateFollower();
+
+      document.querySelectorAll('a, button').forEach(el => {
+        el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+        el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+      });
+    }
+
+    // Scroll reveal
+    document.querySelectorAll('[data-reveal]').forEach(el => {
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 85%',
+        onEnter: () => gsap.to(el, { y: 0, opacity: 1, duration: 1, ease: 'expo.out' }),
+        once: true
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

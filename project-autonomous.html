@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crz Pilot HMI Design — Yang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:ital,wght@0,100..900;1,100..900&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f5f5;
+    --gray: #777;
+    --light-gray: #bbb;
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 4rem;
+    --spacing-xl: 8rem;
+    --font-display: 'Sofia Sans Condensed', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Spline Sans Mono', 'Courier New', monospace;
+    --transition-smooth: cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  html { scroll-behavior: auto; font-size: 16px; }
+  body {
+    font-family: var(--font-body);
+    background: var(--black);
+    color: var(--white);
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ---- Cursor ---- */
+  .cursor {
+    position: fixed; top: 0; left: 0; width: 10px; height: 10px;
+    background: #fff; border-radius: 50%; pointer-events: none;
+    z-index: 9999; transform: translate(-50%, -50%);
+    transition: width 0.3s var(--transition-smooth), height 0.3s var(--transition-smooth), background 0.25s, border-color 0.25s;
+  }
+  .cursor.dark { background: #000; }
+  .cursor.hover { width: 44px; height: 44px; background: transparent; border: 2px solid #fff; }
+  .cursor.hover.dark { border-color: #000; }
+  .cursor-follower {
+    position: fixed; top: 0; left: 0; width: 44px; height: 44px;
+    border: 1px solid rgba(255,255,255,0.35); border-radius: 50%;
+    pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+    transition: all 0.15s ease-out, border-color 0.25s;
+  }
+  .cursor-follower.dark { border-color: rgba(0,0,0,0.25); }
+
+  /* ---- Back link ---- */
+  .back-link {
+    position: fixed; top: var(--spacing-md); left: var(--spacing-lg);
+    z-index: 100; font-family: var(--font-body); font-size: 0.7rem;
+    letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none;
+    mix-blend-mode: difference; color: var(--white); display: flex; align-items: center; gap: 0.5rem;
+    transition: opacity 0.3s;
+  }
+  .back-link:hover { opacity: 0.5; }
+
+  /* ---- Shared ---- */
+  section { padding: var(--spacing-xl) var(--spacing-lg); }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-sm);
+  }
+  .section-title {
+    font-family: var(--font-display); font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 700; letter-spacing: -0.02em; line-height: 0.95; margin-bottom: var(--spacing-lg);
+  }
+  [data-reveal] { opacity: 0; transform: translateY(30px); }
+
+  /* ---- Hero ---- */
+  .project-hero {
+    min-height: 92vh; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 0; background: var(--black); position: relative; overflow: hidden;
+  }
+  .project-hero::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 78% 22%, rgba(255,255,255,0.08) 0%, transparent 28%),
+      radial-gradient(circle at 18% 80%, rgba(255,255,255,0.05) 0%, transparent 34%),
+      linear-gradient(160deg, #141414 0%, #060606 72%);
+  }
+  .project-hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 42px, rgba(255,255,255,0.025) 42px, rgba(255,255,255,0.025) 43px);
+  }
+  .project-hero-overlay {
+    position: relative; z-index: 1; padding: var(--spacing-lg);
+  }
+  .project-hero-category {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--gray); margin-bottom: var(--spacing-xs);
+  }
+  .project-hero-title {
+    font-family: var(--font-display); font-size: clamp(3.6rem, 10vw, 8.5rem);
+    font-weight: 800; letter-spacing: -0.04em; line-height: 0.86; text-transform: uppercase;
+    margin-bottom: var(--spacing-md); max-width: 980px;
+  }
+  .project-hero-desc {
+    font-family: var(--font-body); font-size: 0.9rem; line-height: 1.7;
+    color: var(--light-gray); max-width: 680px;
+  }
+
+  /* ---- Media blocks ---- */
+  .demo, .environment { background: var(--white); color: var(--black); }
+  .demo .section-label, .environment .section-label { color: var(--gray); }
+  .media-video, .principle-img {
+    width: 100%; display: block; border-radius: 4px;
+  }
+  .media-video { background: #111; }
+  .media-note {
+    display: grid; grid-template-columns: 180px 1fr; gap: var(--spacing-lg);
+    margin-top: var(--spacing-md); padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(0,0,0,0.12);
+  }
+  .media-note-label {
+    font-family: var(--font-body); font-size: 0.65rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gray);
+  }
+  .media-note-text {
+    font-family: var(--font-body); font-size: 0.85rem; line-height: 1.8; color: #555;
+    max-width: 760px;
+  }
+
+  /* ---- Principle ---- */
+  .principle { background: var(--black); color: var(--white); }
+  .principle .section-label { color: var(--gray); }
+  .principle-img { border: 1px solid rgba(255,255,255,0.14); }
+
+  /* ---- Features ---- */
+  .features { background: var(--black); color: var(--white); }
+  .features .section-label { color: var(--gray); }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+    background: rgba(255,255,255,0.1); margin-top: var(--spacing-lg);
+  }
+  .feature-card {
+    background: var(--black); padding: var(--spacing-lg) var(--spacing-md);
+  }
+  .feature-img {
+    width: 100%;
+    aspect-ratio: 16/10;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: var(--spacing-md);
+  }
+  .feature-number {
+    font-family: var(--font-display); font-size: 3rem; font-weight: 800;
+    color: rgba(255,255,255,0.18); line-height: 1; margin-bottom: var(--spacing-sm);
+  }
+  .feature-title {
+    font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 700; letter-spacing: -0.01em; line-height: 1; margin-bottom: var(--spacing-sm);
+  }
+  .feature-desc {
+    font-family: var(--font-body); font-size: 0.82rem; line-height: 1.75; color: var(--light-gray);
+  }
+
+  /* ---- Navigation footer ---- */
+  .project-nav {
+    padding: var(--spacing-lg); background: var(--white);
+    display: flex; justify-content: space-between; border-top: 1px solid #e0e0e0;
+  }
+  .project-nav a {
+    font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.15em;
+    text-transform: uppercase; text-decoration: none; color: var(--black);
+    display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.3s;
+  }
+  .project-nav a:hover { opacity: 0.5; }
+
+  @media (max-width: 768px) {
+    section { padding: var(--spacing-lg) var(--spacing-md); }
+    .back-link { left: var(--spacing-md); }
+    .project-hero-overlay { padding: var(--spacing-md); }
+    .media-note { grid-template-columns: 1fr; gap: var(--spacing-sm); }
+    .features-grid { grid-template-columns: 1fr; }
+    .cursor, .cursor-follower { display: none; }
+    body { cursor: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursor-follower"></div>
+
+<a class="back-link" href="index.html">← Back</a>
+
+<!-- Hero -->
+<section class="project-hero">
+  <div class="project-hero-overlay">
+    <p class="project-hero-category">Pilot HMI · Intelligent Mobility</p>
+    <h1 class="project-hero-title">Crz Pilot<br>HMI Design</h1>
+    <p class="project-hero-desc">A pilot interface system for intelligent mobility — translating vehicle perception, environmental context, and automated driving intent into a clear, calm, and trustworthy cockpit experience.</p>
+  </div>
+</section>
+
+<!-- Core Demo -->
+<section class="demo">
+  <div class="section-inner">
+    <p class="section-label" data-reveal>Core Demo</p>
+    <h2 class="section-title" data-reveal>Pilot HMI<br>core features.</h2>
+    <video class="media-video" src="Crz%20pilot.mp4" controls autoplay muted loop playsinline data-reveal></video>
+    <div class="media-note" data-reveal>
+      <p class="media-note-label">Overview</p>
+      <p class="media-note-text">The overall design demo presents the core features of the Pilot HMI: context-aware information hierarchy, readable driving intent, scenario-based camera perspectives, and a calm visual language that helps users understand what the vehicle sees, predicts, and plans to do next.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Design Principle -->
+<section class="principle">
+  <div class="section-inner">
+    <p class="section-label" data-reveal>Design Principle</p>
+    <h2 class="section-title" data-reveal>From system perception<br>to human confidence.</h2>
+    <img class="principle-img" src="design%20principle.png" alt="Crz Pilot HMI Design Principle" data-reveal>
+  </div>
+</section>
+
+<!-- Environment Design -->
+<section class="environment">
+  <div class="section-inner">
+    <p class="section-label" data-reveal>Environment Design</p>
+    <h2 class="section-title" data-reveal>Adaptive atmosphere<br>across the day.</h2>
+    <video class="media-video" src="environment.mp4" controls autoplay muted loop playsinline data-reveal></video>
+    <div class="media-note" data-reveal>
+      <p class="media-note-label">Morning · Day · Dusk · Night</p>
+      <p class="media-note-text">The environment system adapts the Pilot HMI across four moments: early morning, daytime, dusk, and night. Color temperature, contrast, lighting emphasis, and visual density shift with ambient conditions, ensuring the cockpit remains legible, comfortable, and emotionally aligned with the journey.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+  <div class="section-inner">
+    <p class="section-label" data-reveal>Feature System</p>
+    <h2 class="section-title" data-reveal>Other features that make<br>Pilot simple.</h2>
+    <div class="features-grid">
+      <div class="feature-card" data-reveal>
+        <img class="feature-img" src="context%20center.png" alt="Context Center">
+        <p class="feature-number">01</p>
+        <h3 class="feature-title">Context Center</h3>
+        <p class="feature-desc">A central information hub that gathers the most relevant driving context at each moment: current automation state, system confidence, route intent, and upcoming maneuvers. Instead of scattering signals across the interface, Context Center creates one readable focal point.</p>
+      </div>
+      <div class="feature-card" data-reveal>
+        <img class="feature-img" src="Obstacle%20Models.png" alt="Serialized Obstacle Models">
+        <p class="feature-number">02</p>
+        <h3 class="feature-title">Serialized Obstacle Models</h3>
+        <p class="feature-desc">Obstacles are represented as a consistent visual system rather than isolated object icons. Vehicles, pedestrians, cyclists, cones, and temporary road elements share a serialized modeling logic, making perception easier to scan and compare at a glance.</p>
+      </div>
+      <div class="feature-card" data-reveal>
+        <img class="feature-img" src="Scenario-Based%20Perspectives.png" alt="Scenario-Based Perspectives">
+        <p class="feature-number">03</p>
+        <h3 class="feature-title">Scenario-Based Perspectives</h3>
+        <p class="feature-desc">The camera perspective changes according to the driving scenario. Highway cruising, lane change, intersection approach, tight road, and parking-adjacent moments each receive a view that best communicates spatial relationships and vehicle intent.</p>
+      </div>
+      <div class="feature-card" data-reveal>
+        <img class="feature-img" src="Silent%20Mapping.png" alt="Silent Mapping">
+        <p class="feature-number">04</p>
+        <h3 class="feature-title">Silent Mapping</h3>
+        <p class="feature-desc">Mapping feedback is present but quiet. The system continuously builds and updates environmental understanding in the background, surfacing only the signals that help the user feel oriented and confident without turning perception into visual noise.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Navigation -->
+<div class="project-nav">
+  <a href="index.html">← Back to Works</a>
+  <a href="project-blog.html">Next Project →</a>
+</div>
+
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+  (function() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Cursor
+    const cursor = document.getElementById('cursor');
+    const cursorFollower = document.getElementById('cursor-follower');
+
+    if (window.matchMedia('(min-width: 769px)').matches) {
+      let mouseX = 0, mouseY = 0, followerX = 0, followerY = 0;
+
+      function isLightBackground(el) {
+        if (!el) return false;
+        const bg = getComputedStyle(el).backgroundColor;
+        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!m) return false;
+        const brightness = (+m[1] * 299 + +m[2] * 587 + +m[3] * 114) / 1000;
+        const alphaMatch = bg.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+        if (alphaMatch && +alphaMatch[4] < 0.3) return isLightBackground(el.parentElement);
+        return brightness > 180;
+      }
+
+      document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        gsap.to(cursor, { x: mouseX, y: mouseY, duration: 0.1, ease: 'power2.out' });
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const light = isLightBackground(el);
+        cursor.classList.toggle('dark', light);
+        cursorFollower.classList.toggle('dark', light);
+      });
+
+      function animateFollower() {
+        followerX += (mouseX - followerX) * 0.08;
+        followerY += (mouseY - followerY) * 0.08;
+        cursorFollower.style.left = followerX + 'px';
+        cursorFollower.style.top = followerY + 'px';
+        requestAnimationFrame(animateFollower);
+      }
+      animateFollower();
+
+      document.querySelectorAll('a, button, video').forEach(el => {
+        el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+        el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+      });
+    }
+
+    // Scroll reveal
+    document.querySelectorAll('[data-reveal]').forEach(el => {
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 85%',
+        onEnter: () => gsap.to(el, { y: 0, opacity: 1, duration: 1, ease: 'expo.out' }),
+        once: true
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
