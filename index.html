@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:ital,wght@0,100..900;1,100..900&family=Spline+Sans+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<link rel="prefetch" href="assets/l3/L3%20motion.mp4" as="video" type="video/mp4">
+<link rel="prefetch" href="assets/nio-os/NIO%20OS%202.0%20video.mp4" as="video" type="video/mp4">
+<link rel="prefetch" href="assets/autonomous/Crz%20pilot.mp4" as="video" type="video/mp4">
+<link rel="prefetch" href="assets/autonomous/environment.mp4" as="video" type="video/mp4">
 <style>
   /* ============================================
      CSS RESET & BASE
@@ -1515,6 +1519,75 @@
       link.addEventListener('click', () => {
         sessionStorage.setItem('scrollPos', window.scrollY);
       });
+    });
+
+    // ============================================
+    // VIDEO PREFETCH — warm project videos before click
+    // ============================================
+    const projectVideos = {
+      'project-l3.html': ['assets/l3/L3%20motion.mp4'],
+      'project-nio-os.html': ['assets/nio-os/NIO%20OS%202.0%20video.mp4'],
+      'project-autonomous.html': ['assets/autonomous/Crz%20pilot.mp4', 'assets/autonomous/environment.mp4']
+    };
+    const prefetchedVideos = new Set();
+    const videoPrefetchQueue = [];
+    let videoPrefetchRunning = false;
+
+    function canPrefetchVideo() {
+      const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+      if (!connection) return true;
+      if (connection.saveData) return false;
+      return !/^(slow-)?2g$/i.test(connection.effectiveType || '');
+    }
+
+    function consumeResponseBody(response) {
+      if (!response || !response.ok) return Promise.resolve();
+      if (!response.body || !response.body.getReader) return response.blob().then(() => {});
+      const reader = response.body.getReader();
+      function pump() {
+        return reader.read().then(({ done }) => done ? undefined : pump());
+      }
+      return pump();
+    }
+
+    function enqueueVideoPrefetch(src, urgent = false) {
+      if (!canPrefetchVideo() || prefetchedVideos.has(src)) return;
+      prefetchedVideos.add(src);
+      if (urgent) videoPrefetchQueue.unshift(src);
+      else videoPrefetchQueue.push(src);
+      runVideoPrefetchQueue();
+    }
+
+    function runVideoPrefetchQueue() {
+      if (videoPrefetchRunning || !videoPrefetchQueue.length) return;
+      videoPrefetchRunning = true;
+      const src = videoPrefetchQueue.shift();
+      fetch(src, { cache: 'force-cache', mode: 'same-origin' })
+        .then(consumeResponseBody)
+        .catch(() => {})
+        .finally(() => {
+          videoPrefetchRunning = false;
+          runVideoPrefetchQueue();
+        });
+    }
+
+    function prefetchProjectVideos(href, urgent = false) {
+      const path = href.split('#')[0].split('?')[0];
+      (projectVideos[path] || []).forEach(src => enqueueVideoPrefetch(src, urgent));
+    }
+
+    const scheduleVideoPrefetch = window.requestIdleCallback || ((callback) => setTimeout(callback, 1200));
+    window.addEventListener('load', () => {
+      scheduleVideoPrefetch(() => {
+        Object.values(projectVideos).flat().forEach(src => enqueueVideoPrefetch(src));
+      });
+    });
+
+    document.querySelectorAll('a[href*="project-"]').forEach(link => {
+      const warm = () => prefetchProjectVideos(link.getAttribute('href'), true);
+      link.addEventListener('mouseenter', warm, { once: true });
+      link.addEventListener('focus', warm, { once: true });
+      link.addEventListener('touchstart', warm, { once: true, passive: true });
     });
 
     // ============================================
